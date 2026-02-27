@@ -1,18 +1,18 @@
 ---
 name: ebook-anything
-description: Convert any markdown transcript, course notes, or document into a structured ebook with companion study guide and how-to guide. Outputs styled HTML ebooks in one of 6 color themes. Use when the user asks to convert a transcript to an ebook, create learning materials from a document, or make an ebook from a .md file.
+description: Convert any markdown transcript, course notes, or document into a structured ebook with companion study guide and how-to guide. Outputs styled HTML ebooks in one of 6 color themes and generates a PDF. All output goes into its own course folder. Use when the user asks to convert a transcript to an ebook, create learning materials from a document, or make an ebook from a .md file.
 argument-hint: "[transcript-file.md] [output-folder (optional)] [theme (optional)]"
 disable-model-invocation: true
 ---
 
 # Ebook Anything
 
-Convert any markdown transcript or document into three learning artifacts **plus** a styled HTML ebook in one of 6 color themes.
+Convert any markdown transcript or document into three learning artifacts **plus** a styled HTML ebook and PDF — all organized into a dedicated course folder.
 
 ## Arguments
 
 - `$ARGUMENTS[0]` — Path to the input markdown file (required)
-- `$ARGUMENTS[1]` — Output directory (optional; defaults to same folder as input file)
+- `$ARGUMENTS[1]` — Output parent directory (optional; defaults to same folder as input file)
 - `$ARGUMENTS[2]` — Color theme (optional; if omitted, Claude picks based on content tone)
 
 ## Available Color Themes
@@ -32,23 +32,29 @@ If the user does not specify a theme, analyze the content and choose the most fi
 
 ## Stage 0 — Setup
 
-### 1. Install required packages (first run only)
+### 1. Install Python packages
 
 ```bash
 python3 ~/.claude/skills/ebook-anything/scripts/setup.py
 ```
 
-This installs `markdown2` (converts markdown to HTML). It skips installation if already present.
+### 2. Install Node packages (for PDF generation)
 
-### 2. Resolve paths
+```bash
+if [ ! -d ~/.claude/skills/ebook-anything/node_modules ]; then
+  cd ~/.claude/skills/ebook-anything && npm install
+fi
+```
 
-- `INPUT` = `$ARGUMENTS[0]` — normalize path (handle `~`, relative, Windows backslashes)
-- `OUTPUT_DIR` = `$ARGUMENTS[1]` if provided, else same directory as input file
+### 3. Resolve paths
+
+- `INPUT` = `$ARGUMENTS[0]` — normalize the path (handle `~`, relative paths, Windows backslashes)
+- `OUTPUT_PARENT` = `$ARGUMENTS[1]` if provided, else the directory containing the input file
 - `THEME` = `$ARGUMENTS[2]` if provided, else pick from table above based on content tone
 
-Confirm both INPUT exists and OUTPUT_DIR is writable before proceeding.
+Confirm INPUT exists before proceeding.
 
-### 3. Detect file format and read content
+### 4. Detect file format and read content
 
 Check file size:
 
@@ -63,20 +69,30 @@ wc -c "$INPUT"
   Read ALL chunks before proceeding.
 - **Otherwise**: use the `Read` tool directly.
 
-### 4. Analyze the content
+### 5. Analyze the content
 
 Identify:
-- **Topic / subject** and derive the `[topic]` slug (lowercase, hyphenated, e.g., `claude-code`)
+- **Topic / subject** — derive the `[topic]` slug (lowercase, hyphenated, e.g., `ai-video-creation`)
 - **Audience** — beginner, practitioner, mixed?
 - **Major sections / themes** — the 5–10 primary areas covered
-- **Key terminology** — specialized terms that need defining
+- **Key terminology** — specialized terms needing definition
 - **Tone** — formal, casual, technical? (informs theme choice if not specified)
+
+### 6. Resolve course folder
+
+All output files go into a dedicated course folder:
+
+```
+<OUTPUT_PARENT>/courses/[topic]/
+```
+
+Create this folder before writing any files.
 
 ---
 
-## Stage 1 — Create `master.md` (Structured Study Guide)
+## Stage 1 — Create `study-guide.md`
 
-**Output:** `<output-dir>/master.md`
+**Output:** `<course-folder>/study-guide.md`
 
 **Purpose:** Complete hierarchical reference an active learner can annotate.
 
@@ -100,7 +116,6 @@ ___
 
 **Questions to Consider:**
 - [Reflective question]
-- [Another question]
 
 ---
 
@@ -116,13 +131,12 @@ ___
 - Key Terms table at end of each Part
 - Bold key concepts inline; backtick commands and filenames
 - Include "Questions to Consider" per section
-- Aim for depth — this is the complete reference
 
 ---
 
-## Stage 2 — Create `howto.md` (Procedural Checklist Guide)
+## Stage 2 — Create `howto-guide.md`
 
-**Output:** `<output-dir>/howto.md`
+**Output:** `<course-folder>/howto-guide.md`
 
 **Purpose:** Task-oriented companion for doing things, not just understanding them.
 
@@ -136,30 +150,29 @@ ___
 **How to [specific task]:**
 - [ ] Imperative step — exact action
 - [ ] Next step
-  - [ ] Sub-step if needed
-- [ ] Verification: confirm you see [expected result] or run `[cmd]` and verify `[output]`
+- [ ] Verification: confirm you see [expected result]
 ```
 
 **Rules:**
 - 8–10 major sections matching source structure
-- Every action is a checkbox `- [ ]` — imperative, specific: "Open...", "Run...", "Click..."
+- Every action is a checkbox `- [ ]` — imperative and specific
 - Verification sub-step for every major procedure
 - End with a **Quick Reference Card** table: `| Task | Command / Action |`
 
 ---
 
-## Stage 3 — Create `[topic]-ebook.md` (Beginner Ebook — Markdown Draft)
+## Stage 3 — Create `[topic]-ebook.md`
 
-**Output:** `<output-dir>/[topic]-ebook.md`
+**Output:** `<course-folder>/[topic]-ebook.md`
 
-**Purpose:** Beginner-friendly readable guide. This is converted to styled HTML in Stage 4.
+**Purpose:** Beginner-friendly readable guide. Converted to HTML and PDF in later stages.
 
 **Format:**
 
 ```
 # [Full Title]: A Beginner's Guide
 
-> [One-sentence hook about what the reader gains]
+> [One-sentence hook]
 
 ## Chapter 1: [Welcoming title]
 
@@ -173,47 +186,55 @@ ___
 
 **Rules:**
 - 5–8 short chapters (200–400 words each), each building on the last
-- Open Chapter 1 acknowledging that this might feel like a lot — then reframe it positively
-- Zero jargon without definition — define every technical term in plain language
-- Analogies drawn from source material; at least one real-world motivating outcome per chapter
-- End with "Your First Win" or "What's Next" — one concrete action for today
+- Open Chapter 1 acknowledging that this might feel like a lot — then reframe positively
+- Zero jargon without definition; analogies drawn from source material
+- At least one real-world motivating outcome per chapter
+- End with "Your First Win" or "What's Next"
 - Appendix: Quick Reference tables
 - Tone: knowledgeable friend, not a textbook
 
 ---
 
-## Stage 4 — Export to Styled HTML Ebook
+## Stage 4 — Export to Styled HTML
 
-**Output:** `<output-dir>/[topic]-ebook.html`
-
-Run the HTML exporter with the chosen theme:
+**Output:** `<course-folder>/[topic]-ebook.html`
 
 ```bash
 python3 ~/.claude/skills/ebook-anything/scripts/export_html.py \
-  --input "<output-dir>/[topic]-ebook.md" \
-  --output "<output-dir>/[topic]-ebook.html" \
+  --input "<course-folder>/[topic]-ebook.md" \
+  --output "<course-folder>/[topic]-ebook.html" \
   --theme "[chosen-theme]" \
   --title "[Full Title]"
 ```
 
-The script converts the markdown to a self-contained, styled HTML file that opens directly in any browser. Each theme has its own color palette, typography, and layout.
+---
+
+## Stage 5 — Generate PDF
+
+**Output:** `<course-folder>/[topic]-ebook.pdf`
+
+```bash
+node ~/.claude/skills/ebook-anything/scripts/generate_pdf.js \
+  --input "<course-folder>/[topic]-ebook.html" \
+  --output "<course-folder>/[topic]-ebook.pdf"
+```
 
 ---
 
-## Stage 5 — Deliver
+## Stage 6 — Deliver
 
 Print a completion summary:
 
 ```
-✓ master.md              — [N] lines — Full study guide (annotate while learning)
-✓ howto.md               — [N] lines — Task checklists (use while doing)
-✓ [topic]-ebook.md       — [N] lines — Ebook markdown source
-✓ [topic]-ebook.html     — Theme: [theme] — Open in browser to read or print to PDF
+Course folder: <course-folder>/
 
-All files written to: [output-dir]
+✓ study-guide.md        — [N] lines — Full study guide (annotate while learning)
+✓ howto-guide.md        — [N] lines — Task checklists (use while doing)
+✓ [topic]-ebook.md      — [N] lines — Ebook markdown source
+✓ [topic]-ebook.html    — Theme: [theme] — Open in browser
+✓ [topic]-ebook.pdf     — [N] KB — Ready to share or print
 
-To share: send [topic]-ebook.html — opens in any browser, no install needed.
-To print/PDF: open [topic]-ebook.html in Chrome → File → Print → Save as PDF.
+To share: send the PDF or open the HTML in any browser.
 ```
 
 ---
@@ -223,3 +244,5 @@ To print/PDF: open [topic]-ebook.html in Chrome → File → Print → Save as P
 - `scripts/read_large_file.py` — Chunks large/single-line files. Use for files >50KB.
 - `scripts/setup.py` — Installs required Python packages (`markdown2`).
 - `scripts/export_html.py` — Converts markdown to styled HTML in 6 color themes.
+- `scripts/generate_pdf.js` — Converts HTML to PDF using Puppeteer (headless Chrome).
+- `package.json` — Node.js dependencies (`puppeteer`).
