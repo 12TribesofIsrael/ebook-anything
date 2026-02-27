@@ -1,46 +1,54 @@
-# Claude Content Studio
+# ebook-anything
 
-A collection of Claude Code skills for turning raw transcripts into polished learning materials.
+A Claude Code skill that converts any markdown transcript into a full learning package — study guide, how-to checklist, styled HTML ebook, and PDF — all organized into a dedicated course folder.
 
-## What's Inside
+## Output
 
-### `ebook-anything` Skill
+Drop in any `.md` transcript. Get back a `courses/[topic]/` folder with five files:
 
-Drop any markdown transcript or document in, get three learning artifacts out:
-
-| Output | What It Is |
-|--------|-----------|
+| File | What It Is |
+|------|-----------|
 | `study-guide.md` | Hierarchical college-level outline with key terms, note-taking blocks, and reflection questions |
 | `howto-guide.md` | Actionable checkbox checklists with verification steps and a quick reference card |
-| `[topic]-ebook.html` | Styled, self-contained HTML ebook ready to share or print to PDF |
+| `[topic]-ebook.md` | Ebook markdown source |
+| `[topic]-ebook.html` | Styled, self-contained HTML ebook — opens in any browser |
+| `[topic]-ebook.pdf` | Print-ready PDF generated from the HTML |
 
-The HTML ebook ships in one of **6 color themes** — chosen automatically based on content tone, or specified manually:
+## Color Themes
 
-| Theme | Best For |
-|-------|----------|
-| `midnight` | Tech, coding, developer content |
-| `ocean` | Business, productivity, professional |
-| `earth` | Creative, lifestyle, personal development |
-| `minimal` | Academic, research, reference |
-| `editorial` | Bold topics, marketing, high-energy content |
-| `sage` | Wellness, nature, slow topics |
+The HTML and PDF ebook renders in one of 6 themes — auto-selected based on content tone, or specified manually:
+
+| Theme | Best For | Style |
+|-------|----------|-------|
+| `midnight` | Tech, coding, developer content | Dark bg, purple accent |
+| `ocean` | Business, productivity, professional | Light blue tones |
+| `earth` | Creative, lifestyle, personal development | Off-white, terracotta |
+| `minimal` | Academic, research, reference | Clean white, black type |
+| `editorial` | Bold topics, marketing, high-energy | Dark bg, red-orange accent |
+| `sage` | Wellness, nature, slow topics | Soft greens, calming |
 
 ## Requirements
 
-- [Claude Code](https://claude.ai/code) installed
+- [Claude Code](https://claude.ai/code)
 - Python 3.8+
-- Internet connection (for first-run package install)
+- Node.js 18+ (for PDF generation)
 
 ## Installation
 
-Clone this repo, then copy the skill to your personal Claude skills folder:
+Clone and copy the skill to your personal Claude skills folder:
 
 ```bash
-git clone https://github.com/your-username/claude-content-studio.git
-cp -r claude-content-studio/.claude/skills/ebook-anything ~/.claude/skills/
+git clone https://github.com/12TribesofIsrael/ebook-anything.git
+cp -r ebook-anything/.claude/skills/ebook-anything ~/.claude/skills/
 ```
 
-Or use it as a project-level skill by leaving it in `.claude/skills/` inside your working directory.
+Install Node dependencies (one time):
+
+```bash
+cd ~/.claude/skills/ebook-anything && npm install
+```
+
+Or use it as a project-level skill by leaving `.claude/skills/ebook-anything/` inside your working directory.
 
 ## Usage
 
@@ -51,49 +59,54 @@ Or use it as a project-level skill by leaving it in `.claude/skills/` inside you
 ```
 
 **Arguments:**
-1. Input file path (required) — any `.md` file
-2. Output directory (optional) — defaults to same folder as input
-3. Theme (optional) — `midnight`, `ocean`, `earth`, `minimal`, `editorial`, or `sage`
+1. Input `.md` file (required)
+2. Output parent directory (optional — defaults to same folder as input)
+3. Theme name (optional — Claude picks automatically if omitted)
 
 ### Example
 
 ```
-/ebook-anything ~/transcripts/course.md ~/Desktop/output/ ocean
+/ebook-anything ~/transcripts/course.md ~/Desktop/ ocean
 ```
 
-Produces:
+Output:
+
 ```
-~/Desktop/output/
+~/Desktop/courses/course/
 ├── study-guide.md
 ├── howto-guide.md
 ├── course-ebook.md
-└── course-ebook.html   ← open in browser, or print to PDF
+├── course-ebook.html
+└── course-ebook.pdf
 ```
 
-## Handling Large Transcripts
+## Large Transcripts
 
-YouTube transcript exports are often a single 300KB+ line. The skill detects this automatically and uses `scripts/read_large_file.py` to chunk it into processable segments — no manual intervention needed.
+YouTube transcript exports are often a single 300KB+ line. The skill detects this automatically and chunks it for processing — no manual intervention needed.
+
+## How It Works
+
+1. **Setup** — installs Python (`markdown2`) and Node (`puppeteer`) packages on first run
+2. **Analyze** — reads the transcript, identifies topic, audience, major sections, and tone
+3. **Study guide** — hierarchical outline: Parts, Roman numeral sections, key terms tables, note-taking blocks
+4. **How-to guide** — every procedure as a `- [ ]` checkbox with verification steps
+5. **Ebook** — beginner-friendly narrative chapters, conversational tone, real-world examples, appendix tables
+6. **HTML export** — self-contained styled HTML using the chosen color theme
+7. **PDF export** — Puppeteer renders the HTML to a print-ready PDF
+8. **Organize** — all five files placed into `courses/[topic]/`
 
 ## File Structure
 
 ```
-.claude/
-└── skills/
-    └── ebook-anything/
-        ├── SKILL.md                  ← skill definition and instructions
-        └── scripts/
-            ├── setup.py              ← installs required Python packages
-            ├── read_large_file.py    ← handles large / single-line transcripts
-            └── export_html.py        ← converts markdown to themed HTML
+.claude/skills/ebook-anything/
+├── SKILL.md                    ← skill definition and pipeline instructions
+├── package.json                ← Node.js dependencies (puppeteer)
+└── scripts/
+    ├── setup.py                ← installs Python packages (markdown2)
+    ├── read_large_file.py      ← chunks large / single-line transcripts
+    ├── export_html.py          ← markdown → styled HTML (6 themes)
+    └── generate_pdf.js         ← HTML → PDF via Puppeteer
 ```
-
-## How It Works
-
-1. **Analyze** — reads the transcript, identifies topic, sections, audience, and tone
-2. **Study guide** — builds a hierarchical outline with Parts, Roman numeral sections, key terms tables, and note-taking blocks
-3. **How-to guide** — extracts all procedures as checkbox checklists with verification steps
-4. **Ebook** — writes a beginner-friendly narrative guide in chapters, conversational tone, real-world examples
-5. **Export** — converts the ebook markdown to a self-contained styled HTML file using the chosen theme
 
 ## License
 
