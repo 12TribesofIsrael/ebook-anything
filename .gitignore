@@ -1,0 +1,57 @@
+# ── Generated Content (stays local, never committed) ──────────────────────────
+
+# Raw transcripts
+outline*.md
+transcript*.md
+
+# Generated study guides, how-to guides, ebooks
+master*.md
+howto*.md
+*-ebook.md
+*-ebook.html
+*-guide.md
+*beginners-guide.md
+
+# Entire courses/ folder if you create it
+courses/
+
+# HTML and PDF outputs
+*.html
+*.pdf
+
+# Temp working directory used by scripts
+.tmp/
+
+# ── Node / JS tooling outputs ──────────────────────────────────────────────────
+node_modules/
+package-lock.json
+ebooks/node_modules/
+ebooks/package-lock.json
+
+# ── Claude personal config (keep skills, ignore everything else) ───────────────
+
+# Personal credentials and OAuth tokens
+.claude/.credentials.json
+.claude/settings.json
+.claude/settings.local.json
+
+# Conversation history, project state, planning files
+.claude/projects/
+.claude/plans/
+.claude/todos/
+.claude/debug/
+.claude/file-history/
+.claude/plugins/
+
+# All skills except ebook-anything
+.claude/skills/*
+!.claude/skills/ebook-anything
+
+# ── OS & editor noise ──────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+.idea/
