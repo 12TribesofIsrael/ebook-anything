@@ -15,8 +15,9 @@ howto*.md
 # Entire courses/ folder if you create it
 courses/
 
-# HTML and PDF outputs
+# HTML and PDF outputs (but keep webapp source)
 *.html
+!src/webapp/public/*.html
 *.pdf
 
 # Temp working directory used by scripts
@@ -27,6 +28,14 @@ node_modules/
 package-lock.json
 ebooks/node_modules/
 ebooks/package-lock.json
+src/webapp/node_modules/
+src/webapp/package-lock.json
+.claude/skills/ebook-anything/node_modules/
+.claude/skills/ebook-anything/package-lock.json
+
+# Env files (never commit secrets)
+.env
+src/webapp/.env
 
 # ── Claude personal config (keep skills, ignore everything else) ───────────────
 

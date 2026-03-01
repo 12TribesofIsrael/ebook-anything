@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ebook-anything</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d0d0d;
+      color: #e2e2e2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    header .badge {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: #a78bfa;
+      border: 1px solid #a78bfa44;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 1rem;
+    }
+    header h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: .6rem;
+    }
+    header p {
+      color: #888899;
+      font-size: 1.05rem;
+    }
+
+    /* Card */
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a40;
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    /* Form elements */
+    label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: #888899;
+      margin-bottom: .5rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 260px;
+      background: #12121f;
+      border: 1px solid #2a2a40;
+      border-radius: 10px;
+      color: #e2e2e2;
+      font-family: inherit;
+      font-size: .95rem;
+      line-height: 1.6;
+      padding: 1rem 1.25rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+    }
+    textarea:focus { border-color: #7c3aed; }
+    textarea::placeholder { color: #44445a; }
+
+    .row {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.25rem;
+      align-items: flex-end;
+    }
+
+    .field { flex: 1; }
+
+    select {
+      width: 100%;
+      background: #12121f;
+      border: 1px solid #2a2a40;
+      border-radius: 10px;
+      color: #e2e2e2;
+      font-family: inherit;
+      font-size: .95rem;
+      padding: .7rem 1rem;
+      outline: none;
+      cursor: pointer;
+      transition: border-color .2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888899' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      padding-right: 2.5rem;
+    }
+    select:focus { border-color: #7c3aed; }
+
+    button {
+      flex-shrink: 0;
+      background: #7c3aed;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: .75rem 2rem;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      white-space: nowrap;
+    }
+    button:hover { background: #6d28d9; }
+    button:active { transform: scale(.98); }
+    button:disabled {
+      background: #2a2a40;
+      color: #44445a;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Progress */
+    .progress-wrap {
+      margin-top: 1.75rem;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background: #12121f;
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid #2a2a40;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7c3aed, #a78bfa);
+      border-radius: 99px;
+      transition: width .4s ease;
+    }
+    .progress-fill.done {
+      background: linear-gradient(90deg, #16a34a, #4ade80);
+    }
+
+    .progress-pct {
+      text-align: right;
+      font-size: .85rem;
+      color: #888899;
+      margin-top: .4rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Download */
+    .download-wrap {
+      margin-top: 1.75rem;
+      display: none;
+      text-align: center;
+    }
+    .download-wrap.visible { display: block; }
+
+    .success-msg {
+      font-size: 1rem;
+      color: #4ade80;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: .85rem 2.25rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background .2s;
+    }
+    .btn-download:hover { background: #15803d; }
+
+    /* Error */
+    .error-msg {
+      margin-top: 1rem;
+      background: #2a0a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      color: #fca5a5;
+      font-size: .9rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    /* Footer */
+    footer {
+      margin-top: 2.5rem;
+      text-align: center;
+      font-size: .8rem;
+      color: #44445a;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="badge">Claude Code Skill</div>
+      <h1>ebook-anything</h1>
+      <p>Paste any transcript. Get a polished PDF ebook.</p>
+    </header>
+
+    <div class="card">
+      <label for="transcript">Paste your transcript</label>
+      <textarea
+        id="transcript"
+        placeholder="Paste your YouTube transcript, course notes, or any text here…"
+      ></textarea>
+
+      <div class="row">
+        <div class="field">
+          <label for="theme">Color theme</label>
+          <select id="theme">
+            <option value="midnight">Midnight — dark, purple accent</option>
+            <option value="ocean">Ocean — light blue, professional</option>
+            <option value="earth" selected>Earth — warm, terracotta</option>
+            <option value="minimal">Minimal — clean white & black</option>
+            <option value="editorial">Editorial — dark, red-orange</option>
+            <option value="sage">Sage — soft greens, calm</option>
+          </select>
+        </div>
+        <button id="submitBtn" onclick="startConversion()">Convert</button>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-pct" id="progressPct">0%</div>
+      </div>
+
+      <!-- Download -->
+      <div class="download-wrap" id="downloadWrap">
+        <div class="success-msg">✓ Your ebook is ready</div>
+        <a class="btn-download" id="downloadBtn" href="#" download>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download PDF
+        </a>
+      </div>
+
+      <!-- Error -->
+      <div class="error-msg" id="errorMsg"></div>
+    </div>
+
+    <footer>ebook-anything &nbsp;·&nbsp; runs locally at localhost:3000</footer>
+  </div>
+
+  <script>
+    function setProgress(pct) {
+      const fill = document.getElementById('progressFill');
+      const label = document.getElementById('progressPct');
+      fill.style.width = pct + '%';
+      label.textContent = pct + '%';
+      if (pct >= 100) fill.classList.add('done');
+    }
+
+    function reset() {
+      document.getElementById('progressFill').style.width = '0%';
+      document.getElementById('progressFill').classList.remove('done');
+      document.getElementById('progressPct').textContent = '0%';
+      document.getElementById('progressWrap').classList.remove('visible');
+      document.getElementById('downloadWrap').classList.remove('visible');
+      document.getElementById('errorMsg').classList.remove('visible');
+      document.getElementById('errorMsg').textContent = '';
+    }
+
+    async function startConversion() {
+      const text = document.getElementById('transcript').value.trim();
+      const theme = document.getElementById('theme').value;
+      const btn = document.getElementById('submitBtn');
+
+      if (text.length < 100) {
+        showError('Please paste a longer transcript (at least 100 characters).');
+        return;
+      }
+
+      reset();
+      btn.disabled = true;
+      btn.textContent = 'Converting…';
+      document.getElementById('progressWrap').classList.add('visible');
+      setProgress(5);
+
+      try {
+        const res = await fetch('/convert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, theme }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Server error');
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = JSON.parse(line.slice(6));
+
+            if (payload.error) throw new Error(payload.error);
+
+            if (payload.progress !== undefined) setProgress(payload.progress);
+
+            if (payload.token) {
+              // Done
+              const downloadBtn = document.getElementById('downloadBtn');
+              downloadBtn.href = `/download/${payload.token}`;
+              document.getElementById('downloadWrap').classList.add('visible');
+              document.getElementById('progressWrap').classList.remove('visible');
+            }
+          }
+        }
+
+      } catch (err) {
+        showError(err.message || 'Something went wrong. Check the server logs.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Convert';
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.classList.add('visible');
+      document.getElementById('progressWrap').classList.remove('visible');
+    }
+
+    // Allow Ctrl+Enter to submit
+    document.getElementById('transcript').addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') startConversion();
+    });
+  </script>
+</body>
+</html>
