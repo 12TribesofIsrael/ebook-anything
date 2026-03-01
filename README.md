@@ -9,7 +9,7 @@ A Claude Code skill + local web app that converts any markdown transcript into a
 | **How** | `/ebook-anything transcript.md` | Paste text → browser UI |
 | **Who** | You, in your terminal | Anyone with the link |
 | **Output** | 5 files in `courses/[topic]/` | PDF download |
-| **Requires** | Claude Code installed | `ANTHROPIC_API_KEY` in `.env` |
+| **Requires** | Claude Code + Python + Node.js | Node.js + `ANTHROPIC_API_KEY` |
 
 ---
 
@@ -23,21 +23,35 @@ Paste any transcript → pick a color theme → watch the progress bar → downl
 
 ```bash
 cd src/webapp
-cp .env.example .env      # paste your Anthropic API key
+cp .env.example .env      # add your Anthropic API key
 npm install
 node server.js
 # open http://localhost:3000
 ```
 
+> **Tip:** Press `Ctrl+Enter` in the textarea to submit without clicking the button.
+
 ### How the Conversion Works
 
 ```
- 10%  Claude API starts generating ebook content
- 65%  Writing complete — rendering HTML
- 70%  Applying color theme
- 85%  Puppeteer generating PDF
+ 10%  Request received — Claude API starts generating ebook content
+ 65%  Writing complete — building themed HTML
+ 70%  HTML ready — launching Puppeteer
+ 80%  Browser open — rendering PDF
+ 90%  PDF rendering complete
 100%  Download ready
 ```
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `invalid x-api-key` | Your API key changed — restart the server: `Ctrl+C` then `node server.js` |
+| `EADDRINUSE :3000` | Another process owns the port — kill it: `npx kill-port 3000` |
+| `Puppeteer not found` | Run `cd .claude/skills/ebook-anything && npm install` |
+| PDF downloads but is blank | Make sure `printBackground: true` — already set in server.js |
+
+> **Note:** The server reads `.env` only on startup. After changing your API key, always restart.
 
 ---
 
@@ -93,12 +107,20 @@ cd ~/.claude/skills/ebook-anything && npm install
 
 ## Requirements
 
+### Web App
+
+| Requirement | Used For |
+|-------------|---------|
+| Node.js 18+ | Running the Express server + Puppeteer |
+| `ANTHROPIC_API_KEY` | Claude API calls |
+
+### Claude Code Skill
+
 | Requirement | Used For |
 |-------------|---------|
 | [Claude Code](https://claude.ai/code) | Running the skill |
 | Python 3.8+ | Markdown → HTML conversion |
 | Node.js 18+ | PDF generation (Puppeteer) |
-| `ANTHROPIC_API_KEY` | Web app Claude API calls |
 
 ---
 
