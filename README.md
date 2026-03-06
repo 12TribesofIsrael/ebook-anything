@@ -17,15 +17,19 @@ A Claude Code skill + local web app that converts any markdown transcript into a
 
 ### What It Does
 
-Paste any transcript → pick a color theme → watch the progress bar → download your PDF.
+Paste any transcript → pick a color theme → watch the progress bar → download your PDF. Every ebook includes a full-page cover with title, subtitle hook, and theme branding.
 
 ### Run It Locally
 
+**Option A — double-click:**
+Double-click `start.bat` in the project root.
+
+**Option B — terminal:**
 ```bash
 cd src/webapp
 cp .env.example .env      # add your Anthropic API key
 npm install
-node server.js
+npm start
 # open http://localhost:3000
 ```
 
@@ -48,7 +52,7 @@ node server.js
 |---------|-----|
 | `invalid x-api-key` | Your API key changed — restart the server: `Ctrl+C` then `node server.js` |
 | `EADDRINUSE :3000` | Another process owns the port — kill it: `npx kill-port 3000` |
-| `Puppeteer not found` | Run `cd .claude/skills/ebook-anything && npm install` |
+| `Puppeteer not found` | Run `cd src/webapp && npm install` |
 | PDF downloads but is blank | Make sure `printBackground: true` — already set in server.js |
 
 > **Note:** The server reads `.env` only on startup. After changing your API key, always restart.
@@ -137,7 +141,7 @@ ebook-anything/
 ├── src/
 │   └── webapp/
 │       ├── server.js               ← Express + Claude API + Puppeteer + SSE
-│       ├── package.json
+│       ├── package.json            ← includes marked + puppeteer
 │       ├── .env.example
 │       └── public/
 │           └── index.html          ← landing page
@@ -153,6 +157,10 @@ ebook-anything/
 │               ├── export_html.py  ← markdown → themed HTML
 │               └── generate_pdf.js ← HTML → PDF via Puppeteer
 │
+├── scripts/                        ← add new Node utilities here
+├── courses/                        ← generated output from /ebook-anything skill
+├── output/                         ← manual or legacy generated files
+├── start.bat                       ← double-click to launch the web app
 ├── CLAUDE.md
 ├── README.md
 └── .gitignore

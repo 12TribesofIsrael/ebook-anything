@@ -10,34 +10,33 @@ A content creation and knowledge management workspace built around a Claude Code
 
 | File | Description | Size |
 |------|-------------|------|
-| `outline.md` | Raw course transcript — single 302KB line, the source of truth | ~302KB |
-| `master.md` | Structured study guide extracted from the transcript | ~54KB |
-| `howto.md` | Step-by-step procedural checklists extracted from the transcript | ~41KB |
-| `claude-code-beginners-guide.md` | Beginner ebook drafted from distilled transcript content | ~25KB |
+| `docs/transcripts/outline.md` | Raw course transcript — single 302KB line, the source of truth | ~302KB |
+| `docs/transcripts/outline2.md` | Secondary transcript | ~29KB |
+| `src/webapp/` | Express web app — paste a transcript, Claude generates a PDF ebook | — |
+| `scripts/` | Node utilities folder (add new conversion scripts here) | — |
+| `output/` | Manual or legacy generated PDFs and HTML files | — |
+| `courses/` | Generated course bundles from the `/ebook-anything` skill | — |
 
 ## Reading Large Files
 
-`outline.md` is a single long line (~302KB) and cannot be read with standard tools. Use byte-range reads:
+`docs/transcripts/outline.md` is a single long line (~302KB) and cannot be read with standard tools. Use byte-range reads:
 
 ```bash
 # Read in 50KB chunks
-dd if="C:/Users/Tommy/Claude/outline.md" bs=1 skip=0 count=50000
-dd if="C:/Users/Tommy/Claude/outline.md" bs=1 skip=50000 count=50000
+dd if="C:/Users/Tommy/ebookAnything/docs/transcripts/outline.md" bs=1 skip=0 count=50000
+dd if="C:/Users/Tommy/ebookAnything/docs/transcripts/outline.md" bs=1 skip=50000 count=50000
 # etc.
 ```
 
-`master.md` and `howto.md` are large but line-structured — use `Read` with `offset`/`limit` parameters.
+Or use the skill's chunked reader directly:
+
+```bash
+python3 .claude/skills/ebook-anything/scripts/read_large_file.py docs/transcripts/outline.md
+```
 
 ## Content Conventions
 
 - All documents use GitHub-flavored Markdown
-- `master.md` is organized by course section with `##` headers per topic
-- `howto.md` uses checkbox checklists (`- [ ]`) for every actionable step
-- `claude-code-beginners-guide.md` uses a chapter structure aimed at non-technical readers
-
-## Priorities When Editing
-
 - Treat `outline.md` as read-only source material — never edit it
-- `master.md` and `howto.md` are reference extracts — update only when adding newly extracted content
-- `claude-code-beginners-guide.md` is the primary deliverable — this is what gets shared with users
-- Keep the ebook beginner-friendly: avoid jargon, use analogies from the transcript, keep chapters short
+- Course output in `courses/[topic]/` is generated — re-run the skill rather than hand-editing
+- `output/` is for manual or legacy files only

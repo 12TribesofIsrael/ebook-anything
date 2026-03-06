@@ -26,8 +26,8 @@ courses/
 # ── Node / JS tooling outputs ──────────────────────────────────────────────────
 node_modules/
 package-lock.json
-ebooks/node_modules/
-ebooks/package-lock.json
+scripts/node_modules/
+scripts/package-lock.json
 src/webapp/node_modules/
 src/webapp/package-lock.json
 .claude/skills/ebook-anything/node_modules/

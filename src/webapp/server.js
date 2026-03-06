@@ -5,22 +5,12 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const Anthropic = require('@anthropic-ai/sdk');
+const { marked } = require('marked');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// Resolve Puppeteer from the ebook-anything skill
-const puppeteerPath = path.resolve(
-  __dirname, '../../.claude/skills/ebook-anything/node_modules/puppeteer'
-);
-let puppeteer;
-try {
-  puppeteer = require(puppeteerPath);
-} catch {
-  console.error('Puppeteer not found. Run: cd .claude/skills/ebook-anything && npm install');
-  process.exit(1);
-}
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -79,54 +69,20 @@ const THEMES = {
   },
 };
 
-// ── Markdown → HTML (minimal parser for ebook output) ────────────────────────
-
-function mdToHtml(md) {
-  return md
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    // headings
-    .replace(/^#{6} (.+)$/gm, '<h6>$1</h6>')
-    .replace(/^#{5} (.+)$/gm, '<h5>$1</h5>')
-    .replace(/^#{4} (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // blockquote
-    .replace(/^&gt; (.+)$/gm, '<blockquote><p>$1</p></blockquote>')
-    // bold / italic
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // hr
-    .replace(/^---+$/gm, '<hr>')
-    // tables (simple 3-col max)
-    .replace(/^\|(.+)\|$/gm, (match, inner) => {
-      const cells = inner.split('|').map(c => c.trim());
-      return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
-    })
-    // wrap consecutive <tr> in <table>
-    .replace(/((<tr>.+<\/tr>\n?)+)/g, (block) => {
-      const rows = block.trim().split('\n');
-      const header = rows[0].replace(/<td>/g, '<th>').replace(/<\/td>/g, '</th>');
-      const body = rows.slice(2).join('\n'); // skip separator row
-      return `<table><thead>${header}</thead><tbody>${body}</tbody></table>`;
-    })
-    // unordered lists
-    .replace(/(^- .+$(\n^- .+$)*)/gm, (block) => {
-      const items = block.split('\n').map(l => `<li>${l.slice(2)}</li>`).join('');
-      return `<ul>${items}</ul>`;
-    })
-    // paragraphs
-    .replace(/^(?!<[a-z]).+$/gm, '<p>$&</p>')
-    // collapse excess newlines
-    .replace(/\n{3,}/g, '\n\n');
-}
-
 function buildHtml(markdownContent, title, themeName) {
   const t = THEMES[themeName] || THEMES.earth;
-  const body = mdToHtml(markdownContent);
+
+  // Extract hook from first blockquote line
+  const hookMatch = markdownContent.match(/^>\s*(.+)$/m);
+  const hook = hookMatch ? hookMatch[1].trim() : null;
+
+  // Strip H1 and first blockquote from body — they live on the cover
+  const bodyMd = markdownContent
+    .replace(/^#\s+.+\n?/m, '')
+    .replace(/^>\s*.+\n?/m, '');
+  const body = marked.parse(bodyMd);
+
+  const coverHook = hook ? `<p class="cover-hook">${hook}</p>` : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -136,10 +92,13 @@ function buildHtml(markdownContent, title, themeName) {
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:${t.fontBody};font-size:17px;line-height:1.75;background:${t.bg};color:${t.text};padding:0}
-    .wrap{max-width:760px;margin:0 auto;padding:3rem 2rem 6rem}
-    .cover{text-align:center;padding:4rem 0 3rem;border-bottom:2px solid ${t.border};margin-bottom:3rem}
-    .badge{display:inline-block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:${t.bqBg};color:${t.accent};padding:4px 12px;border-radius:20px;margin-bottom:1.5rem;font-family:${t.fontMono}}
-    .cover h1{font-family:${t.fontHeading};font-size:clamp(2rem,5vw,3.2rem);font-weight:800;color:${t.heading};line-height:1.2}
+    .wrap{max-width:760px;margin:0 auto;padding:0 2rem 6rem}
+    .cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:5rem 3rem;background:${t.surface};page-break-after:always;margin-bottom:4rem}
+    .cover-rule{width:60px;height:3px;background:${t.accent};border-radius:2px;margin-bottom:2.5rem}
+    .badge{display:inline-block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:${t.bqBg};color:${t.accent};padding:4px 14px;border-radius:20px;margin-bottom:2rem;font-family:${t.fontMono}}
+    .cover h1{font-family:${t.fontHeading};font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;color:${t.heading};line-height:1.15;margin-bottom:1.5rem}
+    .cover-hook{font-size:1.1rem;color:${t.textMuted};font-style:italic;max-width:460px;line-height:1.65;margin-bottom:3rem}
+    .cover-bottom{margin-top:3rem;font-size:.75rem;color:${t.textMuted};font-family:${t.fontMono};letter-spacing:.1em;text-transform:uppercase}
     h1,h2,h3,h4{font-family:${t.fontHeading};color:${t.heading};line-height:1.3;margin-top:2.5rem;margin-bottom:.75rem}
     h2{font-size:1.55rem;font-weight:700;padding-bottom:.4rem;border-bottom:2px solid ${t.accent};color:${t.accent};margin-top:3rem}
     h3{font-size:1.2rem;font-weight:700}
@@ -162,11 +121,14 @@ function buildHtml(markdownContent, title, themeName) {
   </style>
 </head>
 <body>
+  <div class="cover">
+    <div class="cover-rule"></div>
+    <div class="badge">${t.label} Edition</div>
+    <h1>${title}</h1>
+    ${coverHook}
+    <div class="cover-bottom">ebook-anything</div>
+  </div>
   <div class="wrap">
-    <div class="cover">
-      <div class="badge">${t.label} Edition</div>
-      <h1>${title}</h1>
-    </div>
     <div class="content">${body}</div>
     <div class="footer">Generated with ebook-anything &nbsp;·&nbsp; ${t.label} theme</div>
   </div>

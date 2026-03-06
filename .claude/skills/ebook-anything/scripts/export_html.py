@@ -9,6 +9,7 @@ Themes: midnight, ocean, earth, minimal, editorial, sage
 """
 
 import argparse
+import re
 import sys
 import os
 
@@ -171,8 +172,9 @@ THEMES = {
 
 # ─── HTML Template ────────────────────────────────────────────────────────────
 
-def build_html(content_html: str, title: str, theme: dict) -> str:
+def build_html(content_html: str, title: str, theme: dict, hook: str = "") -> str:
     t = theme
+    cover_hook_html = f'<p class="cover-hook">{hook}</p>' if hook else ""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -196,15 +198,28 @@ def build_html(content_html: str, title: str, theme: dict) -> str:
     .page-wrap {{
       max-width: 760px;
       margin: 0 auto;
-      padding: 3rem 2rem 6rem;
+      padding: 0 2rem 6rem;
     }}
 
     /* ── Cover / Title ── */
     .ebook-cover {{
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       text-align: center;
-      padding: 4rem 0 3rem;
-      border-bottom: 2px solid {t['border']};
-      margin-bottom: 3rem;
+      padding: 5rem 3rem;
+      background: {t['surface']};
+      page-break-after: always;
+      margin-bottom: 4rem;
+    }}
+    .cover-rule {{
+      width: 60px;
+      height: 3px;
+      background: {t['accent']};
+      border-radius: 2px;
+      margin-bottom: 2.5rem;
     }}
     .ebook-cover .theme-badge {{
       display: inline-block;
@@ -213,24 +228,34 @@ def build_html(content_html: str, title: str, theme: dict) -> str:
       text-transform: uppercase;
       background: {t['tag_bg']};
       color: {t['tag_text']};
-      padding: 4px 12px;
+      padding: 4px 14px;
       border-radius: 20px;
-      margin-bottom: 1.5rem;
+      margin-bottom: 2rem;
       font-family: {t['font_mono']};
     }}
     .ebook-cover h1 {{
       font-family: {t['font_heading']};
-      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
       font-weight: 800;
       color: {t['heading']};
-      line-height: 1.2;
-      margin-bottom: 1rem;
+      line-height: 1.15;
+      margin-bottom: 1.5rem;
     }}
-    .ebook-cover .subtitle {{
-      font-size: 1.05rem;
+    .cover-hook {{
+      font-size: 1.1rem;
       color: {t['text_muted']};
-      max-width: 500px;
-      margin: 0 auto;
+      font-style: italic;
+      max-width: 460px;
+      line-height: 1.65;
+      margin-bottom: 3rem;
+    }}
+    .cover-bottom {{
+      margin-top: 3rem;
+      font-size: 0.75rem;
+      color: {t['text_muted']};
+      font-family: {t['font_mono']};
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
     }}
 
     /* ── Headings ── */
@@ -371,11 +396,14 @@ def build_html(content_html: str, title: str, theme: dict) -> str:
   </style>
 </head>
 <body>
+  <div class="ebook-cover">
+    <div class="cover-rule"></div>
+    <div class="theme-badge">{t['label']} Edition</div>
+    <h1>{title}</h1>
+    {cover_hook_html}
+    <div class="cover-bottom">ebook-anything</div>
+  </div>
   <div class="page-wrap">
-    <div class="ebook-cover">
-      <div class="theme-badge">{t['label']} Edition</div>
-      <h1>{title}</h1>
-    </div>
     <div class="ebook-content">
       {content_html}
     </div>
@@ -428,9 +456,19 @@ def main():
         if not title:
             title = os.path.splitext(os.path.basename(args.input))[0].replace("-", " ").title()
 
+    # Extract hook from first blockquote line
+    hook = ""
+    hook_match = re.search(r'^>\s*(.+)$', md_text, re.MULTILINE)
+    if hook_match:
+        hook = hook_match.group(1).strip()
+
+    # Strip H1 and first blockquote from body (they appear on the cover)
+    body_md = re.sub(r'^#\s+.+\n?', '', md_text, count=1, flags=re.MULTILINE)
+    body_md = re.sub(r'^>\s*.+\n?', '', body_md, count=1, flags=re.MULTILINE)
+
     # Convert markdown → HTML
     content_html = markdown2.markdown(
-        md_text,
+        body_md,
         extras=[
             "tables",
             "fenced-code-blocks",
@@ -443,7 +481,7 @@ def main():
 
     # Apply theme
     theme = THEMES[args.theme]
-    full_html = build_html(content_html, title, theme)
+    full_html = build_html(content_html, title, theme, hook=hook)
 
     # Write output
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
